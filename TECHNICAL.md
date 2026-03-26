@@ -11,17 +11,51 @@ Request → Router → Controller → Service → Repository → Model/Eloquent 
                            BusinessRules
 ```
 
+## Banco de Dados em Docker
+
+O PostgreSQL roda como serviço dedicado no Docker Compose.
+
+- Imagem: `postgres:16-alpine`
+- Container: `desafio_effecti_postgres`
+- Rede interna: `desafio_effecti_network`
+- Volume persistente: `postgres_data`
+- Healthcheck: `pg_isready`
+
+### Portas
+
+- Interna entre containers: `DB_PORT=5432`
+- Externa no host: `DB_PORT_HOST` (padrão `5432`)
+- Se a porta `5432` estiver ocupada, usar `DB_PORT_HOST=5433` (ou outra livre)
+
+### Fluxo de startup
+
+Na subida do container `php`:
+
+1. Instala dependências do Composer
+2. Aguarda dependência do PostgreSQL via healthcheck do Compose
+3. Executa migrations automaticamente quando `AUTO_MIGRATE=true`
+4. Executa seed automaticamente quando `AUTO_SEED=true`
+5. Inicia PHP-FPM
+
+Comandos manuais continuam disponíveis:
+
+```bash
+docker compose exec php composer migrate
+docker compose exec php composer seed
+docker compose exec php composer rollback
+```
+
 ### Camadas
 
-| Camada         | Responsabilidade                                                                 |
-|----------------|----------------------------------------------------------------------------------|
-| **Router**     | Mapeia URLs para controllers (FastRoute)                                         |
-| **Controller** | Recebe request, monta parâmetros, chama service, retorna response JSON           |
-| **Service**    | Lógica de negócio: validações, regras, orquestração de operações                 |
-| **Validator**  | Validação de dados de entrada (campos obrigatórios, formatos, CPF/CNPJ)          |
-| **BusinessRules** | Regras de negócio extensíveis (Strategy Pattern para descontos)               |
-| **Repository** | Abstração sobre o Eloquent ORM para queries e persistência                       |
-| **Model**      | Eloquent Models com relações, scopes e accessors                                 |
+| Camada            | Responsabilidade                                                        |
+| ----------------- | ----------------------------------------------------------------------- |
+| **Router**        | Mapeia URLs para controllers (FastRoute)                                |
+| **Controller**    | Recebe request, monta parâmetros, chama service, retorna response JSON  |
+| **Service**       | Lógica de negócio: validações, regras, orquestração de operações        |
+| **Validator**     | Validação de dados de entrada (campos obrigatórios, formatos, CPF/CNPJ) |
+| **BusinessRules** | Regras de negócio extensíveis (Strategy Pattern para descontos)         |
+| **Repository**    | Abstração sobre o Eloquent ORM para queries e persistência              |
+| **Model**         | Eloquent Models com relações, scopes e accessors                        |
 
 ### Decisão: PHP Puro + Eloquent Standalone
 
@@ -53,7 +87,8 @@ DiscountCalculator (orquestrador)
 ```
 
 **Para adicionar uma nova regra de desconto:**
-1. Cree uma classe que implementa `DiscountRuleInterface`
+
+1. Crie uma classe que implementa `DiscountRuleInterface`
 2. Registro-a no array `$rules` do `DiscountCalculator`
 
 Nenhuma outra alteração é necessária.
@@ -79,14 +114,14 @@ settings (tabela de configurações chave-valor)
 
 ### Tabelas
 
-| Tabela              | Campos Principais                                                  |
-|---------------------|--------------------------------------------------------------------|
-| clients             | id, name, document(CPF/CNPJ), email, status(A/I)                  |
-| services            | id, name, base_monthly_value                                       |
-| contracts           | id, client_id(FK), start_date, end_date, status(A/C)              |
-| contract_items      | id, contract_id(FK CASCADE), service_id(FK RESTRICT), quantity, unit_value |
-| contract_history    | id, contract_id(FK CASCADE), action, description, changed_data(JSONB) |
-| settings            | id, key(unique), value, description, type                          |
+| Tabela           | Campos Principais                                                          |
+| ---------------- | -------------------------------------------------------------------------- |
+| clients          | id, name, document(CPF/CNPJ), email, status(A/I)                           |
+| services         | id, name, base_monthly_value                                               |
+| contracts        | id, client_id(FK), start_date, end_date, status(A/C)                       |
+| contract_items   | id, contract_id(FK CASCADE), service_id(FK RESTRICT), quantity, unit_value |
+| contract_history | id, contract_id(FK CASCADE), action, description, changed_data(JSONB)      |
+| settings         | id, key(unique), value, description, type                                  |
 
 ### Relacionamentos e Integridade Referencial
 
@@ -100,21 +135,23 @@ settings (tabela de configurações chave-valor)
 ## Validações
 
 ### CPF/CNPJ (`DocumentValidator`)
+
 Implementação completa do algoritmo de verificação de dígitos:
+
 - **CPF**: 11 dígitos, rejeita sequências de dígitos iguais, valida 1º e 2º dígitos verificadores
 - **CNPJ**: 14 dígitos, mesma lógica com pesos diferentes
 
 ### Regras de Negócio
 
-| Regra                                              | Localização          |
-|----------------------------------------------------|----------------------|
-| Cliente com contratos ativos não pode ser excluído  | `ClientService`      |
-| Serviço com contratos ativos não pode ser excluído  | `ServiceService`     |
-| Contrato só pode ser criado para cliente ativo      | `ContractService`    |
-| Contrato cancelado não pode ser editado             | `ContractService`    |
-| Todas as alterações no contrato geram histórico     | `ContractService`    |
-| end_date deve ser posterior a start_date            | `ContractValidator`  |
-| Desconto progressivo por quantidade é configurável  | `ProgressiveDiscountRule` |
+| Regra                                              | Localização               |
+| -------------------------------------------------- | ------------------------- |
+| Cliente com contratos ativos não pode ser excluído | `ClientService`           |
+| Serviço com contratos ativos não pode ser excluído | `ServiceService`          |
+| Contrato só pode ser criado para cliente ativo     | `ContractService`         |
+| Contrato cancelado não pode ser editado            | `ContractService`         |
+| Todas as alterações no contrato geram histórico    | `ContractService`         |
+| end_date deve ser posterior a start_date           | `ContractValidator`       |
+| Desconto progressivo por quantidade é configurável | `ProgressiveDiscountRule` |
 
 ---
 
@@ -122,14 +159,14 @@ Implementação completa do algoritmo de verificação de dígitos:
 
 Todas as operações em contratos são registradas na tabela `contract_history`:
 
-| Ação           | Quando                         | Dados Gravados (JSONB)              |
-|----------------|--------------------------------|-------------------------------------|
-| `created`      | Contrato criado                | Dados iniciais do contrato          |
-| `updated`      | Contrato atualizado            | Campos alterados (antes/depois)     |
-| `item_added`   | Item adicionado ao contrato    | Dados do item                       |
-| `item_updated` | Item do contrato atualizado    | Campos alterados                    |
-| `item_removed` | Item removido do contrato      | Dados do item removido              |
-| `cancelled`    | Contrato cancelado             | Status anterior e motivo            |
+| Ação           | Quando                      | Dados Gravados (JSONB)          |
+| -------------- | --------------------------- | ------------------------------- |
+| `created`      | Contrato criado             | Dados iniciais do contrato      |
+| `updated`      | Contrato atualizado         | Campos alterados (antes/depois) |
+| `item_added`   | Item adicionado ao contrato | Dados do item                   |
+| `item_updated` | Item do contrato atualizado | Campos alterados                |
+| `item_removed` | Item removido do contrato   | Dados do item removido          |
+| `cancelled`    | Contrato cancelado          | Status anterior e motivo        |
 
 ---
 
@@ -137,10 +174,10 @@ Todas as operações em contratos são registradas na tabela `contract_history`:
 
 Os testes unitários cobrem as áreas mais críticas da aplicação:
 
-| Teste                        | Foco                                               |
-|------------------------------|-----------------------------------------------------|
-| `DocumentValidatorTest`      | Validação de CPF/CNPJ (dígitos, formato, edge cases)|
-| `DiscountCalculatorTest`     | Cálculo de desconto (faixas, boundary, desativado)   |
+| Teste                    | Foco                                                 |
+| ------------------------ | ---------------------------------------------------- |
+| `DocumentValidatorTest`  | Validação de CPF/CNPJ (dígitos, formato, edge cases) |
+| `DiscountCalculatorTest` | Cálculo de desconto (faixas, boundary, desativado)   |
 
 ### Executar
 
@@ -162,12 +199,12 @@ Todas as respostas de erro seguem um formato padronizado:
 }
 ```
 
-| HTTP Status | Exceção              | Uso                        |
-|-------------|----------------------|----------------------------|
-| 422         | ValidationException  | Dados inválidos            |
-| 400         | BusinessException    | Regra de negócio violada   |
-| 404         | NotFoundException    | Recurso não encontrado     |
-| 500         | Exception genérica   | Erro interno               |
+| HTTP Status | Exceção             | Uso                      |
+| ----------- | ------------------- | ------------------------ |
+| 422         | ValidationException | Dados inválidos          |
+| 400         | BusinessException   | Regra de negócio violada |
+| 404         | NotFoundException   | Recurso não encontrado   |
+| 500         | Exception genérica  | Erro interno             |
 
 ---
 

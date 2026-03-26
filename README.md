@@ -17,61 +17,60 @@ Sistema ERP para gestão de contratos e serviços, desenvolvido como desafio té
 - **Vite** — bundler
 
 ### Infraestrutura
-- **PostgreSQL 14+** (instalação local)
+- **PostgreSQL 16** (container Docker)
 - **Nginx** — reverse proxy (Docker)
-- **Docker Compose** — orquestração (PHP, Nginx, Frontend)
+- **Docker Compose** — orquestração (PostgreSQL, PHP, Nginx, Frontend)
 
 ---
 
 ## Como Executar
 
 ### Pré-requisitos
-- **PostgreSQL 14+** instalado e rodando
 - **Docker** e **Docker Compose** instalados
 
-### 1. Criar o Banco de Dados
-
-Crie um banco de dados no seu PostgreSQL:
-
-```sql
-CREATE DATABASE <DB_DATABASE>;
-```
-
-### 2. Configurar Variáveis de Ambiente
+### 1. Configurar Variáveis de Ambiente
 
 ```bash
 # Copie o arquivo de exemplo
 cp .env.example .env
 
-# Edite o .env com as credenciais do seu PostgreSQL
+# Se necessário, ajuste as variáveis
 ```
 
 **Exemplo de `.env`:**
 
 ```env
-DB_HOST=172.17.0.1              # Padrão recomendado no Linux
-DB_PORT=5432                     # Ou 5433 se já tiver outro serviço na 5432
-DB_DATABASE=<DB_DATABASE>
-DB_USERNAME=<DB_USERNAME>
-DB_PASSWORD=<DB_PASSWORD>
+DB_HOST=postgres
+DB_PORT=5432
+DB_PORT_HOST=5432                # Use 5433 (ou outra) se 5432 estiver ocupada
+DB_DATABASE=desafio_effecti
+DB_USERNAME=erp_user
+DB_PASSWORD=effecti2026!
+AUTO_MIGRATE=true
+AUTO_SEED=true
 ```
 
-> **Nota:** Em Linux, use `172.17.0.1` como padrão para conectar ao PostgreSQL do host a partir dos containers Docker. Se necessário, tente `host.docker.internal` como alternativa.
+> **Nota:** `DB_PORT` é a porta interna entre containers. Para acesso externo no host, use `DB_PORT_HOST`.
 
-### 3. Subir os Containers
+### 2. Subir os Containers
 
 ```bash
 docker compose up -d --build
 ```
 
-### 4. Rodar Migrations e Seeds
+O backend aguarda o PostgreSQL ficar saudável e executa migrations/seeds automaticamente (quando `AUTO_MIGRATE=true` e `AUTO_SEED=true`).
+
+### 3. Comandos Manuais (opcionais)
 
 ```bash
 # Criar as tabelas
-docker compose exec php vendor/bin/phinx migrate -c phinx.php
+docker compose exec php composer migrate
 
 # Popular dados iniciais (serviços e configurações)
-docker compose exec php vendor/bin/phinx seed:run -c phinx.php
+docker compose exec php composer seed
+
+# Rollback da última migration
+docker compose exec php composer rollback
 ```
 
 ### Acessos
@@ -80,6 +79,7 @@ docker compose exec php vendor/bin/phinx seed:run -c phinx.php
 |------------|-----------------------------|
 | Frontend   | http://localhost:5173       |
 | API        | http://localhost:8080/api   |
+| PostgreSQL | localhost:${DB_PORT_HOST}   |
 
 ### Parar o projeto
 
@@ -91,6 +91,17 @@ docker compose down
 
 ```bash
 docker compose exec php vendor/bin/phpunit
+```
+
+### Dicas de operação
+
+```bash
+# Ver logs do backend (inclui migrate/seed no startup)
+docker compose logs php
+
+# Limpar banco e recriar tudo do zero
+docker compose down -v
+docker compose up -d --build
 ```
 
 ---
