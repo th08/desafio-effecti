@@ -1,0 +1,27 @@
+# Ambiente
+.env
+
+# PHP
+/backend/vendor/
+/backend/.phpunit.result.cache
+
+# Node
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.yarn/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log

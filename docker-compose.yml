@@ -1,0 +1,42 @@
+services:
+  php:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: desafio_effecti_php
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env
+    networks:
+      - desafio_effecti_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: desafio_effecti_nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./backend/public:/app/public
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php
+    networks:
+      - desafio_effecti_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: desafio_effecti_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - desafio_effecti_network
+
+networks:
+  desafio_effecti_network:
+    driver: bridge
