@@ -51,9 +51,9 @@ cp .env.example .env
 ```env
 DB_HOST=172.17.0.1              # Padrão recomendado no Linux
 DB_PORT=5432                     # Ou 5433 se já tiver outro serviço na 5432
-DB_DATABASE=desafio_effecti
-DB_USERNAME=postgres
-DB_PASSWORD=sua_senha_aqui
+DB_DATABASE=<DB_DATABASE>
+DB_USERNAME=<DB_USERNAME>
+DB_PASSWORD=<DB_PASSWORD>
 ```
 
 > **Nota:** Em Linux, use `172.17.0.1` como padrão para conectar ao PostgreSQL do host a partir dos containers Docker. Se necessário, tente `host.docker.internal` como alternativa.
@@ -132,7 +132,7 @@ As faixas são configuráveis pela interface, sem necessidade de alteração de 
 ```
 ├── backend/
 │   ├── db/
-│   │   ├── migrations/          # Migrações Phinx (6 tabelas)
+│   │   ├── migrations/          # Migrações Phinx
 │   │   └── seeds/               # Seed inicial (serviços e configurações)
 │   ├── public/
 │   │   └── index.php            # Entry point (CORS, routing, error handling)
@@ -165,61 +165,3 @@ As faixas são configuráveis pela interface, sem necessidade de alteração de 
 ├── docker-compose.yml
 ├── .env.example
 └── .gitignore
-```
-
----
-
-## Endpoints da API
-
-### Clientes
-| Método | Rota              | Descrição            |
-|--------|-------------------|----------------------|
-| GET    | /api/clients      | Listar (paginado)    |
-| POST   | /api/clients      | Criar                |
-| GET    | /api/clients/:id  | Buscar por ID        |
-| PUT    | /api/clients/:id  | Atualizar            |
-| DELETE | /api/clients/:id  | Excluir              |
-
-### Serviços
-| Método | Rota               | Descrição            |
-|--------|--------------------|----------------------|
-| GET    | /api/services      | Listar (paginado)    |
-| POST   | /api/services      | Criar                |
-| GET    | /api/services/:id  | Buscar por ID        |
-| PUT    | /api/services/:id  | Atualizar            |
-| DELETE | /api/services/:id  | Excluir              |
-
-### Contratos
-| Método | Rota                            | Descrição            |
-|--------|---------------------------------|----------------------|
-| GET    | /api/contracts                  | Listar (paginado)    |
-| POST   | /api/contracts                  | Criar                |
-| GET    | /api/contracts/:id              | Buscar por ID        |
-| PUT    | /api/contracts/:id              | Atualizar            |
-| DELETE | /api/contracts/:id              | Excluir              |
-| POST   | /api/contracts/:id/items        | Adicionar item       |
-| PUT    | /api/contracts/:id/items/:itemId| Atualizar item       |
-| DELETE | /api/contracts/:id/items/:itemId| Remover item         |
-| PATCH  | /api/contracts/:id/cancel       | Cancelar contrato    |
-| GET    | /api/contracts/:id/history      | Histórico            |
-
-### Configurações
-| Método | Rota                  | Descrição             |
-|--------|-----------------------|-----------------------|
-| GET    | /api/settings         | Listar configurações  |
-| PUT    | /api/settings/:key    | Atualizar configuração|
-
----
-
-## Variáveis de Ambiente
-
-| Variável      | Exemplo                | Descrição                                      |
-|---------------|------------------------|------------------------------------------------|
-| DB_HOST       | 172.17.0.1             | Host do PostgreSQL (padrão recomendado no Linux)           |
-| DB_PORT       | 5432                   | Porta do PostgreSQL                            |
-| DB_DATABASE   | desafio_effecti        | Nome do banco de dados                         |
-| DB_USERNAME   | postgres               | Usuário do banco                               |
-| DB_PASSWORD   | password         | Senha do banco                                 |
-| CORS_ORIGIN   | http://localhost:5173  | Origem permitida no CORS (frontend)            |
-| APP_ENV       | development            | Ambiente da aplicação                          |
-| APP_DEBUG     | true                   | Modo debug ativo                               |
