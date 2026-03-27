@@ -84,8 +84,15 @@ docker compose exec php composer rollback
 ### Parar o projeto
 
 ```bash
+# Para os containers, mantém os dados do banco
 docker compose down
+
+# Para os containers E apaga os dados do banco (volume postgres_data)
+# Use quando quiser resetar o banco do zero ou ao trocar credenciais
+docker compose down -v
 ```
+
+> **Importante:** Se você alterar `DB_USERNAME`, `DB_PASSWORD` ou `DB_DATABASE` no `.env` após já ter subido o projeto, o postgres **não atualiza as credenciais do volume existente** automaticamente. Nesse caso, execute `docker compose down -v` antes de subir novamente para recriar o banco com as novas configurações.
 
 ### Rodar testes
 
